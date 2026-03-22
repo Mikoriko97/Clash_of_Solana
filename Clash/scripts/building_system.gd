@@ -862,17 +862,20 @@ func _try_place_building() -> bool:
 			print("Max %s limit reached (%d)" % [def.name, def.max_count])
 			return false
 
-	# Check and deduct building cost
+	# Check and deduct building cost (local validation)
 	var cost: Dictionary = def.get("cost", {})
-	print("Placing %s, cost: %s, resources before: %s" % [def.name, cost, resources])
 	for res_name in cost:
 		if resources.get(res_name, 0) < cost[res_name]:
 			print("Not enough %s! Need %d, have %d" % [res_name, cost[res_name], resources.get(res_name, 0)])
 			return false
 	for res_name in cost:
 		resources[res_name] -= cost[res_name]
-	print("Resources after: %s" % [resources])
 	_update_resource_ui()
+
+	# Send to server for validation (server is source of truth)
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge and bridge.is_online():
+		bridge.build_on_server(current_building_id, current_grid_pos.x, current_grid_pos.y)
 
 	for x in range(def.cells.x):
 		for z in range(def.cells.y):
@@ -1357,13 +1360,19 @@ func _on_attack_pressed() -> void:
 	if attack_system and attack_system.has_method("enter_attack_mode"):
 		attack_system.enter_attack_mode()
 
+	# When battle ends locally, settle on server
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge and bridge.is_online() and bridge.current_battle_id != "":
+		# Will be settled when all buildings destroyed or timeout
+		pass
+
 
 func _on_find_pressed() -> void:
 	var bridge = get_node_or_null("/root/BlockchainBridge")
-	if bridge:
+	if bridge and bridge.is_online():
 		bridge.find_opponent()
 	else:
-		print("Find pressed (offline)")
+		print("Find pressed (offline — create wallet first)")
 
 
 func _on_wallet_btn_pressed() -> void:

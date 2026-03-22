@@ -5,6 +5,7 @@ import { z } from "zod";
 import { query } from "../db";
 import { Keypair, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { config } from "../config";
+import { txInitializeVillage } from "../services/solana-state";
 
 const connectSchema = z.object({
   pubkey: z.string().min(32).max(44),
@@ -93,19 +94,28 @@ export async function authRoutes(app: FastifyInstance) {
         app.log.warn("Airdrop failed (rate limit?), wallet created without SOL");
       }
 
-      // Register player in DB
+      // Register player in DB (minimal — for keypair storage + matchmaking index)
       await query(
-        `INSERT INTO players (pubkey, village_pda, display_name, last_active)
-         VALUES ($1, $1, 'Player', NOW())
+        `INSERT INTO players (pubkey, secret_key, display_name, last_active)
+         VALUES ($1, $2, 'Player', NOW())
          ON CONFLICT (pubkey) DO UPDATE SET last_active = NOW()`,
-        [pubkey]
+        [pubkey, secretKey]
       );
       await query(
-        `INSERT INTO matchmaking_pool (village_pda, player_pubkey, trophy_count, th_level, last_active)
-         VALUES ($1, $1, 0, 1, NOW())
-         ON CONFLICT (village_pda) DO UPDATE SET last_active = NOW()`,
+        `INSERT INTO matchmaking_pool (player_pubkey, trophy_count, th_level, last_active)
+         VALUES ($1, 0, 1, NOW())
+         ON CONFLICT (player_pubkey) DO UPDATE SET last_active = NOW()`,
         [pubkey]
       );
+
+      // Initialize village ON-CHAIN (Solana L1)
+      let villageTxSig = "";
+      try {
+        villageTxSig = await txInitializeVillage(keypair, "Player Village");
+        app.log.info({ pubkey, sig: villageTxSig }, "Village initialized on Solana L1");
+      } catch (e: any) {
+        app.log.warn({ pubkey, error: e.message }, "Village init TX failed (may already exist)");
+      }
 
       // Issue JWT
       const token = app.jwt.sign(
@@ -119,6 +129,8 @@ export async function authRoutes(app: FastifyInstance) {
         secretKey,
         token,
         balanceSOL: balance / LAMPORTS_PER_SOL,
+        villageTxSignature: villageTxSig,
+        source: "solana_l1",
       };
     } catch (err) {
       app.log.error(err, "Wallet creation failed");

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("CwQSPhfgdxHFD5tFPfE7DCe3mhxinZZCdHRW2AAtQ5Uk");
+declare_id!("U9apFonJ9auQ8SWf86ZqEmx8b6tixeXXHCgUV1cE7NH");
 
 /// Стан однієї будівлі.
 /// Типи будівель — з Godot building_system.gd building_defs

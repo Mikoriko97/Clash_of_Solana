@@ -5,6 +5,7 @@ import { playerRoutes } from "./routes/player";
 import { battleRoutes } from "./routes/battle";
 import { leaderboardRoutes } from "./routes/leaderboard";
 import { shopRoutes } from "./routes/shop";
+import { gameRoutes, registerWsClient, unregisterWsClient } from "./routes/game";
 import { healthCheck as dbHealthCheck, closePool } from "./db";
 import { redisHealthCheck, closeRedis } from "./redis";
 import { getConnection } from "./solana";
@@ -50,6 +51,32 @@ async function main() {
   await app.register(battleRoutes, { prefix: "/api/v1/battle" });
   await app.register(leaderboardRoutes, { prefix: "/api/v1/leaderboard" });
   await app.register(shopRoutes, { prefix: "/api/v1/shop" });
+  await app.register(gameRoutes, { prefix: "/api/v1/game" });
+
+  // ── WebSocket для real-time нотифікацій ─────────────────────
+  app.get("/ws", { websocket: true }, (socket, request) => {
+    let playerPubkey: string | null = null;
+
+    socket.on("message", (msg: any) => {
+      try {
+        const data = JSON.parse(msg.toString());
+        if (data.type === "auth" && data.token) {
+          const decoded = app.jwt.verify(data.token) as { pubkey: string };
+          playerPubkey = decoded.pubkey;
+          registerWsClient(playerPubkey, socket);
+          socket.send(JSON.stringify({ type: "authenticated", pubkey: playerPubkey }));
+          app.log.info({ pubkey: playerPubkey }, "WebSocket client authenticated");
+        }
+      } catch {}
+    });
+
+    socket.on("close", () => {
+      if (playerPubkey) {
+        unregisterWsClient(playerPubkey, socket);
+        app.log.info({ pubkey: playerPubkey }, "WebSocket client disconnected");
+      }
+    });
+  });
 
   // ── Health check з DB + Redis + Solana ──────────────────────
   app.get("/health", async () => {

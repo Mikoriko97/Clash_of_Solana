@@ -97,14 +97,53 @@ func get_battle_history(pubkey: String = "") -> void:
 	_api_get("/player/%s/history" % pk, "_on_battle_history")
 
 
-# ── Battle ────────────────────────────────────────────────────
+# ── Game Actions (server-validated) ────────────────────────────
+
+func get_game_state() -> void:
+	_api_get("/game/state", "_on_game_state")
+
+
+func server_build(building_type: String, grid_x: int, grid_y: int) -> void:
+	_api_post("/game/build", {
+		"buildingType": building_type,
+		"gridX": grid_x,
+		"gridY": grid_y,
+	}, "_on_server_build")
+
+
+func server_upgrade(building_id: int) -> void:
+	_api_post("/game/upgrade", {"buildingId": building_id}, "_on_server_upgrade")
+
+
+func server_train(troop_type: String) -> void:
+	_api_post("/game/train", {"troopType": troop_type}, "_on_server_train")
+
+
+func server_find_opponent() -> void:
+	_api_post("/game/find-opponent", {}, "_on_matchmake")
+
+
+func server_attack(defender_pubkey: String) -> void:
+	_api_post("/game/attack", {"defenderPubkey": defender_pubkey}, "_on_battle_started_response")
+
+
+func server_settle_battle(battle_id: String, stars: int, destruction_pct: int, ships: int) -> void:
+	_api_post("/game/settle", {
+		"battleId": battle_id,
+		"stars": stars,
+		"destructionPct": destruction_pct,
+		"shipsDeployed": ships,
+	}, "_on_battle_settled")
+
+
+# ── Legacy Battle ────────────────────────────────────────────
 
 func find_opponent() -> void:
-	_api_post("/battle/matchmake", {}, "_on_matchmake")
+	server_find_opponent()
 
 
 func prepare_battle(defender_pubkey: String) -> void:
-	_api_post("/battle/prepare", {"defenderPubkey": defender_pubkey}, "_on_battle_prepare")
+	server_attack(defender_pubkey)
 
 
 func get_battle_details(battle_id: String) -> void:
@@ -298,22 +337,51 @@ func _on_shop_purchase(data: Dictionary) -> void:
 	player_data_received.emit({"purchase": data})
 
 
+# ── Game action response handlers ────────────────────────────
+
+func _on_game_state(data: Dictionary) -> void:
+	village_data_received.emit(data)
+
+
+func _on_server_build(data: Dictionary) -> void:
+	player_data_received.emit({"action": "build", "result": data})
+
+
+func _on_server_upgrade(data: Dictionary) -> void:
+	player_data_received.emit({"action": "upgrade", "result": data})
+
+
+func _on_server_train(data: Dictionary) -> void:
+	player_data_received.emit({"action": "train", "result": data})
+
+
+func _on_battle_started_response(data: Dictionary) -> void:
+	battle_started.emit(data)
+
+
+func _on_battle_settled(data: Dictionary) -> void:
+	battle_ended.emit(data)
+
+
 func _on_request_completed(_result: int, _response_code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
 	pass
 
 
 # ── WebSocket for battle updates ─────────────────────────────
 
-func connect_battle_ws(battle_id: String) -> void:
-	_ws_url = base_url.replace("http", "ws") + "/api/v1/battle/%s/ws" % battle_id
-
+func connect_game_ws() -> void:
+	_ws_url = base_url.replace("http", "ws") + "/ws"
 	_ws_client = WebSocketPeer.new()
 	var err := _ws_client.connect_to_url(_ws_url)
 	if err != OK:
 		error.emit("WebSocket connection failed: %d" % err)
 		return
-
-	print("[NetworkManager] WebSocket connecting to: ", _ws_url)
+	print("[NetworkManager] WebSocket connecting to: %s" % _ws_url)
+	# Auth will be sent after connection is established
+	await get_tree().create_timer(1.0).timeout
+	if _ws_client and _ws_client.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		_ws_client.send_text(JSON.stringify({"type": "auth", "token": jwt_token}))
+		print("[NetworkManager] WebSocket auth sent")
 
 
 func disconnect_battle_ws() -> void:
@@ -332,9 +400,14 @@ func _handle_ws_message(text: String) -> void:
 	var msg_type: String = data.get("type", "")
 
 	match msg_type:
-		"battle_update":
+		"authenticated":
+			print("[NetworkManager] WebSocket authenticated as %s" % data.get("pubkey", ""))
+		"under_attack":
+			print("[NetworkManager] UNDER ATTACK by %s!" % data.get("attackerPubkey", ""))
 			battle_update.emit(data)
-		"battle_end":
+		"battle_settled":
 			battle_ended.emit(data)
+		"building_constructed":
+			player_data_received.emit({"action": "remote_build", "result": data})
 		_:
-			print("[NetworkManager] Unknown WS message: ", msg_type)
+			print("[NetworkManager] WS message: %s" % msg_type)

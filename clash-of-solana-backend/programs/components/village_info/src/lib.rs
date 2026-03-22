@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Ho5ETZPYBcMb5cY3gH3XC3xaWw9JvmDzEpZxrfe1ETzZ");
+declare_id!("FyqN3SMjAJuDrog4AzByYBEJ46uRkqmmTNbsLftCWCDA");
 
 /// Основна інформація про село гравця.
 /// Адаптовано з Godot: game_manager.gd + building_system.gd

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("GknTMMniY5FUFMRX3fdxArkoKj4DdQqFrdaiQtYrXvFU");
+declare_id!("FyqN3SMjAJuDrog4AzByYBEJ46uRkqmmTNbsLftCWCDA");
 
 /// Ресурси гравця.
 /// Адаптовано з Godot: building_system.gd resources dict

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("DP3fQW9BQVT9rJH6e5g5634QGh4Jz4PkBhHaAF9E6fdL");
+declare_id!("2dkHPjGHDQrC5gNrmPR4ucQ4UsFppveJbVMxzq9uEpAJ");
 
 /// Стан та статистики трупа.
 /// Типи та stats — з Godot base_troop.gd + knight.gd/mage.gd/barbarian.gd/archer.gd/ranger.gd

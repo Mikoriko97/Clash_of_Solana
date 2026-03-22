@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("F7pjZrQfgcFXdTW51k3kUoGh8TkNw9m84HCH9LA5KxzN");
+declare_id!("DRKgDLgKTYkomepLZdkacyeWkMRcfpS39RPBUGMJ8iuy");
 
 /// Стан бою — делегується в Private Ephemeral Rollup (TEE).
 /// Адаптовано з Godot: attack_system.gd
