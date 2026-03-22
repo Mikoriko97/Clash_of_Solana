@@ -1,0 +1,22 @@
+shader_type canvas_item;
+
+// DEBUG: bright red for ANY transparent pixel to verify shader runs
+uniform float alpha_cutoff : hint_range(0.0, 1.0, 0.01) = 0.15;
+uniform float halo_radius : hint_range(10.0, 300.0) = 120.0;
+uniform vec3 color_shallow : source_color = vec3(0.15, 0.75, 0.65);
+uniform vec3 color_deep : source_color = vec3(0.05, 0.30, 0.50);
+uniform float alpha_max : hint_range(0.0, 1.0) = 0.55;
+uniform float wave_speed : hint_range(0.0, 3.0) = 0.8;
+uniform float wave_amount : hint_range(0.0, 0.15) = 0.04;
+
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+
+	if (tex.a > alpha_cutoff) {
+		COLOR = tex;
+		return;
+	}
+
+	// DEBUG: paint ALL transparent pixels bright red
+	COLOR = vec4(1.0, 0.0, 0.0, 0.9);
+}

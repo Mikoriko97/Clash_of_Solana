@@ -1,0 +1,53 @@
+{
+  "source": "Extracted from Godot building_system.gd",
+  "buildings": {
+    "town_hall": {
+      "name": "Town Hall",
+      "cells": [4, 4],
+      "max_count": 1,
+      "is_main": true,
+      "hp_levels": [3500, 6000, 10000],
+      "cost": {}
+    },
+    "mine": {
+      "name": "Mine",
+      "cells": [3, 3],
+      "hp_levels": [1200, 2200, 3800],
+      "cost": { "gold": 400, "wood": 150 }
+    },
+    "barn": {
+      "name": "Barn",
+      "cells": [2, 3],
+      "hp_levels": [2000, 3500, 6000],
+      "cost": { "gold": 200, "wood": 200, "ore": 100 }
+    },
+    "port": {
+      "name": "Port",
+      "cells": [3, 3],
+      "hp_levels": [1800, 3200, 5500],
+      "cost": { "gold": 800, "wood": 300, "ore": 200 }
+    },
+    "sawmill": {
+      "name": "Sawmill",
+      "cells": [3, 3],
+      "hp_levels": [1200, 2200, 3800],
+      "cost": { "gold": 300 },
+      "special": "acts_as_barracks"
+    },
+    "turret": {
+      "name": "Turret",
+      "cells": [2, 2],
+      "hp_levels": [900, 1600, 2800],
+      "cost": { "gold": 600, "wood": 350, "ore": 200 },
+      "defense": {
+        "levels": {
+          "1": { "damage": 80, "fire_rate": 1.0 },
+          "2": { "damage": 180, "fire_rate": 0.5 },
+          "3": { "damage": 320, "fire_rate": 0.333 }
+        },
+        "detect_range": 1.0,
+        "bullet_speed": 4.0
+      }
+    }
+  }
+}

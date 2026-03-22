@@ -1,0 +1,12 @@
+[package]
+name = "battle-action"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = { workspace = true }
+ephemeral-rollups-sdk = { workspace = true }
+battle-state = { path = "../../components/battle_state" }
+
+[lib]
+crate-type = ["cdylib", "lib"]

@@ -1,0 +1,21 @@
+{
+  "name": "clash-of-solana-backend",
+  "private": true,
+  "workspaces": ["packages/*", "backend"],
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "deploy": "bash scripts/deploy.sh",
+    "dev:backend": "cd backend && npm run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^22.0.0",
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.95.0",
+    "chai": "^4.4.0",
+    "@types/chai": "^4.3.0",
+    "ts-mocha": "^10.0.0",
+    "mocha": "^10.7.0"
+  }
+}

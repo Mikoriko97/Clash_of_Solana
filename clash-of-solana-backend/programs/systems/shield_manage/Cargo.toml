@@ -1,0 +1,11 @@
+[package]
+name = "shield-manage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = { workspace = true }
+village-info = { path = "../../components/village_info" }
+
+[lib]
+crate-type = ["cdylib", "lib"]

@@ -1,0 +1,90 @@
+{
+  "source": "Extracted from Godot knight.gd / mage.gd / barbarian.gd / archer.gd / ranger.gd",
+  "troops": {
+    "knight": {
+      "display": "Knight (Tank)",
+      "type": "melee",
+      "weapon": "sword",
+      "levels": {
+        "1": { "hp": 1100, "damage": 75, "atk_speed": 1.667 },
+        "2": { "hp": 1450, "damage": 100, "atk_speed": 1.538 },
+        "3": { "hp": 1850, "damage": 130, "atk_speed": 1.429 }
+      },
+      "move_speed": 0.5,
+      "attack_range": 0.24,
+      "upgrade_costs": {
+        "1": { "gold": 150, "ore": 80 },
+        "2": { "gold": 400, "ore": 250 },
+        "3": { "gold": 900, "ore": 600 }
+      }
+    },
+    "mage": {
+      "display": "Wizard (Burst Mage)",
+      "type": "ranged",
+      "weapon": "staff",
+      "levels": {
+        "1": { "hp": 420, "damage": 185, "atk_speed": 1.25 },
+        "2": { "hp": 560, "damage": 245, "atk_speed": 1.111 },
+        "3": { "hp": 720, "damage": 320, "atk_speed": 1.0 }
+      },
+      "move_speed": 0.4,
+      "attack_range": 0.37,
+      "upgrade_costs": {
+        "1": { "gold": 250, "ore": 150 },
+        "2": { "gold": 600, "ore": 400 },
+        "3": { "gold": 1400, "ore": 900 }
+      }
+    },
+    "barbarian": {
+      "display": "Berserker (Fast Brawler)",
+      "type": "melee",
+      "weapon": "axe",
+      "levels": {
+        "1": { "hp": 520, "damage": 90, "atk_speed": 0.625 },
+        "2": { "hp": 690, "damage": 120, "atk_speed": 0.571 },
+        "3": { "hp": 880, "damage": 158, "atk_speed": 0.526 }
+      },
+      "move_speed": 0.4,
+      "attack_range": 0.24,
+      "upgrade_costs": {
+        "1": { "gold": 200, "ore": 120 },
+        "2": { "gold": 500, "ore": 350 },
+        "3": { "gold": 1100, "ore": 750 }
+      }
+    },
+    "archer": {
+      "display": "Archer (Sniper)",
+      "type": "ranged",
+      "weapon": "bow",
+      "levels": {
+        "1": { "hp": 580, "damage": 130, "atk_speed": 1.111 },
+        "2": { "hp": 760, "damage": 175, "atk_speed": 1.0 },
+        "3": { "hp": 970, "damage": 228, "atk_speed": 0.909 }
+      },
+      "move_speed": 0.45,
+      "attack_range": 0.49,
+      "upgrade_costs": {
+        "1": { "gold": 180, "wood": 100 },
+        "2": { "gold": 450, "wood": 300 },
+        "3": { "gold": 1000, "wood": 700 }
+      }
+    },
+    "ranger": {
+      "display": "Ranger (Balanced DPS)",
+      "type": "ranged",
+      "weapon": "crossbow",
+      "levels": {
+        "1": { "hp": 680, "damage": 110, "atk_speed": 1.0 },
+        "2": { "hp": 900, "damage": 148, "atk_speed": 0.909 },
+        "3": { "hp": 1150, "damage": 192, "atk_speed": 0.833 }
+      },
+      "move_speed": 0.55,
+      "attack_range": 0.40,
+      "upgrade_costs": {
+        "1": { "gold": 120, "wood": 60 },
+        "2": { "gold": 350, "wood": 200 },
+        "3": { "gold": 800, "wood": 500 }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Rust / Anchor
+target/
+**/*.rs.bk
+
+# Node.js
+node_modules/
+dist/
+*.tgz
+
+# Environment
+.env
+*.pem
+
+# Solana keypairs (NEVER commit private keys!)
+*-keypair.json
+*.json.bak
+key_sol.txt
+
+# Godot
+.godot/
+*.import
+export_presets.cfg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build artifacts
+*.so
+*.o
+*.a
+
+# Logs
+*.log
+npm-debug.log*

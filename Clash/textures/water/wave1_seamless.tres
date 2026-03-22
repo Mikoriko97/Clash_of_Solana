@@ -1,0 +1,11 @@
+[gd_resource type="NoiseTexture2D" format=3 uid="uid://dirip1cxspd34"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_c2ad3"]
+seed = 222
+frequency = 0.018
+fractal_octaves = 4
+
+[resource]
+noise = SubResource("FastNoiseLite_c2ad3")
+seamless = true
+seamless_blend_skirt = 0.3

@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "programs/components/village_info",
+    "programs/components/resources",
+    "programs/components/building_data",
+    "programs/components/troop_stats",
+    "programs/components/battle_state",
+    "programs/systems/village_init",
+    "programs/systems/build_construct",
+    "programs/systems/build_upgrade",
+    "programs/systems/resource_collect",
+    "programs/systems/troop_train",
+    "programs/systems/battle_start",
+    "programs/systems/battle_action",
+    "programs/systems/battle_settle",
+    "programs/systems/shield_manage",
+]
+
+[workspace.dependencies]
+anchor-lang           = "0.32.1"
+anchor-spl            = "0.32.1"
+ephemeral-rollups-sdk = { version = ">=0.8.0", features = ["anchor"] }
+# Pin to avoid edition2024 requirement (Anchor BPF toolchain has Cargo 1.84)
+constant_time_eq      = "=0.3.1"
+
+[workspace.metadata.anchor]
+cluster = "devnet"
+
+[profile.release]
+overflow-checks = true

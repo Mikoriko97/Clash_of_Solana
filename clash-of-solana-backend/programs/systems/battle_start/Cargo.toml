@@ -1,0 +1,13 @@
+[package]
+name = "battle-start"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = { workspace = true }
+ephemeral-rollups-sdk = { workspace = true }
+battle-state = { path = "../../components/battle_state" }
+village-info = { path = "../../components/village_info" }
+
+[lib]
+crate-type = ["cdylib", "lib"]
