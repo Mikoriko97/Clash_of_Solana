@@ -11,9 +11,10 @@ signal battle_started(data: Dictionary)
 signal battle_update(data: Dictionary)
 signal battle_ended(data: Dictionary)
 signal matchmake_result(data: Dictionary)
+signal wallet_created(data: Dictionary)
 signal error(message: String)
 
-const DEFAULT_BASE_URL := "http://localhost:3000"
+const DEFAULT_BASE_URL := "http://127.0.0.1:3000"
 const API_PREFIX := "/api/v1"
 
 var base_url: String = DEFAULT_BASE_URL
@@ -54,6 +55,11 @@ func connect_wallet(pubkey: String, signature: String, message: String) -> void:
 		"message": message
 	}
 	_api_post("/auth/connect", body, "_on_auth_connect")
+
+
+## Create a random wallet on backend (MVP — no browser wallet needed)
+func create_random_wallet() -> void:
+	_api_post("/auth/create-wallet", {}, "_on_wallet_created")
 
 
 func refresh_token() -> void:
@@ -161,10 +167,15 @@ func _api_post(endpoint: String, body: Dictionary, callback: String) -> void:
 	_pending_requests[_request_id] = callback
 
 	var json_body := JSON.stringify(body)
+	print("[NetworkManager] POST %s (id=%d)" % [url, _request_id])
 	var http := HTTPRequest.new()
+	http.timeout = 10.0
 	http.request_completed.connect(_on_generic_request_completed.bind(_request_id, http))
 	add_child(http)
-	http.request(url, headers, HTTPClient.METHOD_POST, json_body)
+	var err = http.request(url, headers, HTTPClient.METHOD_POST, json_body)
+	if err != OK:
+		print("[NetworkManager] REQUEST ERROR: %d" % err)
+		error.emit("HTTP request error: %d" % err)
 
 
 func _get_headers() -> PackedStringArray:
@@ -178,17 +189,24 @@ func _on_generic_request_completed(result: int, response_code: int, _headers: Pa
 	http_node.queue_free()
 
 	if not _pending_requests.has(req_id):
+		print("[NetworkManager] Unknown request ID: %d" % req_id)
 		return
 
 	var callback: String = _pending_requests[req_id]
 	_pending_requests.erase(req_id)
 
+	print("[NetworkManager] Response: code=%d result=%d callback=%s" % [response_code, result, callback])
+
 	if result != HTTPRequest.RESULT_SUCCESS:
+		print("[NetworkManager] HTTP FAILED: result=%d" % result)
 		error.emit("HTTP request failed: %d" % result)
 		return
 
+	var body_text = body.get_string_from_utf8()
+	print("[NetworkManager] Body: %s" % body_text.substr(0, 200))
+
 	var json := JSON.new()
-	var parse_result := json.parse(body.get_string_from_utf8())
+	var parse_result := json.parse(body_text)
 	if parse_result != OK:
 		error.emit("Failed to parse response JSON")
 		return
@@ -198,9 +216,23 @@ func _on_generic_request_completed(result: int, response_code: int, _headers: Pa
 
 	if has_method(callback):
 		call(callback, data)
+	else:
+		print("[NetworkManager] Callback not found: %s" % callback)
 
 
 # ── Response handlers ─────────────────────────────────────────
+
+func _on_wallet_created(data: Dictionary) -> void:
+	if data.get("success", false):
+		jwt_token = data.get("token", "")
+		player_pubkey = data.get("pubkey", "")
+		is_authenticated = true
+		wallet_created.emit(data)
+		connected.emit(player_pubkey)
+		print("[NetworkManager] Wallet created: %s | Balance: %s SOL" % [player_pubkey, data.get("balanceSOL", 0)])
+	else:
+		error.emit("Wallet creation failed: %s" % data.get("error", "Unknown"))
+
 
 func _on_auth_connect(data: Dictionary) -> void:
 	if data.get("success", false):

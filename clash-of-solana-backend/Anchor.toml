@@ -19,7 +19,7 @@ shield_manage    = "6mVjkn6Fi1eqjujLQqiuDDTE457JytY62N4atxMziMWM"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

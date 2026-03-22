@@ -3,6 +3,8 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { z } from "zod";
 import { query } from "../db";
+import { Keypair, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { config } from "../config";
 
 const connectSchema = z.object({
   pubkey: z.string().min(32).max(44),
@@ -68,6 +70,59 @@ export async function authRoutes(app: FastifyInstance) {
     } catch (err) {
       app.log.error(err, "Signature verification failed");
       return reply.status(401).send({ error: "Signature verification failed" });
+    }
+  });
+
+  // Create random wallet (MVP — for testing without browser wallet)
+  app.post("/create-wallet", async (request, reply) => {
+    try {
+      // Generate random Solana keypair
+      const keypair = Keypair.generate();
+      const pubkey = keypair.publicKey.toBase58();
+      const secretKey = bs58.encode(keypair.secretKey);
+
+      // Airdrop SOL from localnet/devnet
+      const connection = new Connection(config.solanaL1RpcUrl, "confirmed");
+      let balance = 0;
+      try {
+        const sig = await connection.requestAirdrop(keypair.publicKey, 2 * LAMPORTS_PER_SOL);
+        await connection.confirmTransaction(sig);
+        balance = await connection.getBalance(keypair.publicKey);
+      } catch (e) {
+        // Airdrop may fail on devnet rate limit — wallet still created
+        app.log.warn("Airdrop failed (rate limit?), wallet created without SOL");
+      }
+
+      // Register player in DB
+      await query(
+        `INSERT INTO players (pubkey, village_pda, display_name, last_active)
+         VALUES ($1, $1, 'Player', NOW())
+         ON CONFLICT (pubkey) DO UPDATE SET last_active = NOW()`,
+        [pubkey]
+      );
+      await query(
+        `INSERT INTO matchmaking_pool (village_pda, player_pubkey, trophy_count, th_level, last_active)
+         VALUES ($1, $1, 0, 1, NOW())
+         ON CONFLICT (village_pda) DO UPDATE SET last_active = NOW()`,
+        [pubkey]
+      );
+
+      // Issue JWT
+      const token = app.jwt.sign(
+        { pubkey, iat: Math.floor(Date.now() / 1000) },
+        { expiresIn: "24h" }
+      );
+
+      return {
+        success: true,
+        pubkey,
+        secretKey,
+        token,
+        balanceSOL: balance / LAMPORTS_PER_SOL,
+      };
+    } catch (err) {
+      app.log.error(err, "Wallet creation failed");
+      return reply.status(500).send({ error: "Failed to create wallet" });
     }
   });
 

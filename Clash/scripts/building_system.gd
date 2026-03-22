@@ -123,6 +123,13 @@ var wood_label: Label
 var gold_label: Label
 var ore_label: Label
 
+# ── Wallet UI ────────────────────────────────────────────────
+var _wallet_panel: PanelContainer
+var _wallet_status: Label
+var _wallet_addr: Label
+var _wallet_balance: Label
+var _wallet_btn: Button
+
 var building_panel: PanelContainer
 var building_panel_title: Label
 var building_panel_hp: Label
@@ -313,6 +320,73 @@ func _create_ui() -> void:
 	build_button.pressed.connect(_toggle_shop)
 	canvas.add_child(build_button)
 
+	# ── Wallet panel (top left) ───────────────────────────────
+	_wallet_panel = PanelContainer.new()
+	_wallet_panel.anchor_left = 0.0
+	_wallet_panel.anchor_top = 0.0
+	_wallet_panel.offset_left = 10
+	_wallet_panel.offset_top = 10
+	_wallet_panel.offset_right = 300
+	_wallet_panel.offset_bottom = 115
+	var wp_style = StyleBoxFlat.new()
+	wp_style.bg_color = Color(0.05, 0.06, 0.1, 0.92)
+	wp_style.set_corner_radius_all(12)
+	wp_style.set_border_width_all(2)
+	wp_style.border_color = Color(0.25, 0.6, 0.4, 0.7)
+	wp_style.content_margin_left = 12
+	wp_style.content_margin_right = 12
+	wp_style.content_margin_top = 8
+	wp_style.content_margin_bottom = 8
+	_wallet_panel.add_theme_stylebox_override("panel", wp_style)
+	canvas.add_child(_wallet_panel)
+
+	var wvbox = VBoxContainer.new()
+	wvbox.add_theme_constant_override("separation", 3)
+	_wallet_panel.add_child(wvbox)
+
+	_wallet_status = Label.new()
+	_wallet_status.text = "OFFLINE"
+	_wallet_status.add_theme_font_size_override("font_size", 16)
+	_wallet_status.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	wvbox.add_child(_wallet_status)
+
+	_wallet_addr = Label.new()
+	_wallet_addr.text = "No wallet connected"
+	_wallet_addr.add_theme_font_size_override("font_size", 11)
+	_wallet_addr.add_theme_color_override("font_color", Color(0.55, 0.6, 0.75))
+	wvbox.add_child(_wallet_addr)
+
+	_wallet_balance = Label.new()
+	_wallet_balance.text = ""
+	_wallet_balance.add_theme_font_size_override("font_size", 14)
+	_wallet_balance.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5))
+	wvbox.add_child(_wallet_balance)
+
+	_wallet_btn = Button.new()
+	_wallet_btn.text = "Create Wallet"
+	_wallet_btn.custom_minimum_size = Vector2(150, 30)
+	_wallet_btn.add_theme_font_size_override("font_size", 13)
+	_wallet_btn.add_theme_color_override("font_color", Color.WHITE)
+	var wbtn_s = StyleBoxFlat.new()
+	wbtn_s.bg_color = Color(0.12, 0.5, 0.3, 0.95)
+	wbtn_s.set_corner_radius_all(8)
+	wbtn_s.content_margin_left = 8
+	wbtn_s.content_margin_right = 8
+	wbtn_s.content_margin_top = 4
+	wbtn_s.content_margin_bottom = 4
+	_wallet_btn.add_theme_stylebox_override("normal", wbtn_s)
+	var wbtn_h = wbtn_s.duplicate()
+	wbtn_h.bg_color = Color(0.18, 0.6, 0.38, 1.0)
+	_wallet_btn.add_theme_stylebox_override("hover", wbtn_h)
+	_wallet_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	_wallet_btn.pressed.connect(_on_wallet_btn_pressed)
+	wvbox.add_child(_wallet_btn)
+
+	# Connect bridge signals
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.wallet_ready.connect(_on_wallet_ready)
+		bridge.sync_status_changed.connect(_on_chain_status)
 
 	# ── Shop panel (center) ────────────────────────────────────
 	shop_panel = PanelContainer.new()
@@ -826,6 +900,11 @@ func _try_place_building() -> bool:
 		"max_hp": max_hp,
 	})
 
+	# ── Sync to blockchain ────────────────────────────────────
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.sync_building_placed(current_building_id, current_grid_pos.x, current_grid_pos.y, 1)
+
 	return true
 
 
@@ -990,6 +1069,11 @@ func _upgrade_selected() -> void:
 			var s = def.get("model_scale", 0.2)
 			model.scale = Vector3(s, s, s)
 			selected_building.node.add_child(model)
+
+	# ── Sync to blockchain ────────────────────────────────────
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.sync_building_upgraded(selected_building.id, selected_building.level)
 
 
 func _update_upgrade_cost_label(def: Dictionary, current_level: int) -> void:
@@ -1262,6 +1346,11 @@ func _upgrade_troop(troop_name: String) -> void:
 	_update_resource_ui()
 	_refresh_barracks_panel()
 
+	# ── Sync to blockchain ────────────────────────────────────
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.sync_troop_trained(troop_name, next_lvl)
+
 
 func _on_attack_pressed() -> void:
 	var attack_system = get_node_or_null("../AttackSystem")
@@ -1270,4 +1359,37 @@ func _on_attack_pressed() -> void:
 
 
 func _on_find_pressed() -> void:
-	print("Find pressed")
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.find_opponent()
+	else:
+		print("Find pressed (offline)")
+
+
+func _on_wallet_btn_pressed() -> void:
+	_wallet_btn.text = "Creating..."
+	_wallet_btn.disabled = true
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.create_wallet()
+	else:
+		_wallet_btn.text = "No Bridge!"
+		_wallet_btn.disabled = false
+
+
+func _on_wallet_ready(pubkey: String, balance: float) -> void:
+	var short = pubkey.substr(0, 6) + "..." + pubkey.substr(pubkey.length() - 4)
+	_wallet_addr.text = short
+	_wallet_balance.text = "%.2f SOL" % balance
+	_wallet_btn.visible = false
+	_wallet_status.text = "ON-CHAIN"
+	_wallet_status.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+
+
+func _on_chain_status(is_synced: bool) -> void:
+	if is_synced:
+		_wallet_status.text = "ON-CHAIN"
+		_wallet_status.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+	else:
+		_wallet_status.text = "OFFLINE"
+		_wallet_status.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))

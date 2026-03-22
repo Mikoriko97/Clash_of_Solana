@@ -16,6 +16,12 @@ var _transitioning := false
 var _map_btn_layer: CanvasLayer
 
 
+var _status_label: Label
+var _wallet_label: Label
+var _balance_label: Label
+var _wallet_btn: Button
+var _wallet_layer: CanvasLayer
+
 func _ready() -> void:
 	# Start on island, world map hidden
 	_show_island_immediate()
@@ -25,6 +31,12 @@ func _ready() -> void:
 
 	# Connect Home button from world map HUD
 	_connect_home_button()
+
+	# Build wallet UI (Create Wallet button + info)
+	_build_wallet_ui()
+
+	# Connect to blockchain bridge
+	_connect_blockchain()
 
 	# Cloud reveal to start
 	cloud._set_clouds_covering()
@@ -154,3 +166,129 @@ func _btn_style(bg: Color, border: Color) -> StyleBoxFlat:
 	sb.content_margin_top = 8
 	sb.content_margin_bottom = 8
 	return sb
+
+
+# ══════════════════════════════════════
+#  WALLET UI & BLOCKCHAIN
+# ══════════════════════════════════════
+
+func _build_wallet_ui() -> void:
+	_wallet_layer = CanvasLayer.new()
+	_wallet_layer.layer = 100
+	add_child(_wallet_layer)
+
+	var panel = PanelContainer.new()
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.offset_left = 8
+	panel.offset_top = 8
+	panel.offset_right = 320
+	panel.offset_bottom = 110
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.07, 0.12, 0.9)
+	style.set_corner_radius_all(12)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.3, 0.35, 0.5, 0.6)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	panel.add_theme_stylebox_override("panel", style)
+	_wallet_layer.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	panel.add_child(vbox)
+
+	# Status line
+	_status_label = Label.new()
+	_status_label.text = "OFFLINE"
+	_status_label.add_theme_font_size_override("font_size", 16)
+	_status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	vbox.add_child(_status_label)
+
+	# Wallet address (hidden until created)
+	_wallet_label = Label.new()
+	_wallet_label.text = ""
+	_wallet_label.add_theme_font_size_override("font_size", 11)
+	_wallet_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.8))
+	vbox.add_child(_wallet_label)
+
+	# Balance
+	_balance_label = Label.new()
+	_balance_label.text = ""
+	_balance_label.add_theme_font_size_override("font_size", 13)
+	_balance_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5))
+	vbox.add_child(_balance_label)
+
+	# Create Wallet button
+	_wallet_btn = Button.new()
+	_wallet_btn.text = "Create Wallet"
+	_wallet_btn.custom_minimum_size = Vector2(140, 32)
+	_wallet_btn.add_theme_font_size_override("font_size", 13)
+	var btn_style = StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.15, 0.5, 0.3, 0.9)
+	btn_style.set_corner_radius_all(8)
+	btn_style.content_margin_left = 8
+	btn_style.content_margin_right = 8
+	btn_style.content_margin_top = 4
+	btn_style.content_margin_bottom = 4
+	_wallet_btn.add_theme_stylebox_override("normal", btn_style)
+	var btn_hover = btn_style.duplicate()
+	btn_hover.bg_color = Color(0.2, 0.6, 0.35, 0.95)
+	_wallet_btn.add_theme_stylebox_override("hover", btn_hover)
+	_wallet_btn.add_theme_color_override("font_color", Color.WHITE)
+	_wallet_btn.pressed.connect(_on_create_wallet_pressed)
+	vbox.add_child(_wallet_btn)
+
+
+func _connect_blockchain() -> void:
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if not bridge:
+		return
+	bridge.sync_status_changed.connect(_on_sync_status_changed)
+	bridge.blockchain_event.connect(_on_blockchain_event)
+	bridge.wallet_ready.connect(_on_wallet_ready)
+
+
+func _on_create_wallet_pressed() -> void:
+	_wallet_btn.text = "Creating..."
+	_wallet_btn.disabled = true
+	var bridge = get_node_or_null("/root/BlockchainBridge")
+	if bridge:
+		bridge.create_wallet()
+
+
+func _on_wallet_ready(pubkey: String, balance: float) -> void:
+	# Show short address: Abc...xyz
+	var short_addr = pubkey.substr(0, 6) + "..." + pubkey.substr(pubkey.length() - 4)
+	_wallet_label.text = short_addr
+	_balance_label.text = "%.2f SOL" % balance
+	_wallet_btn.visible = false
+
+
+func _on_sync_status_changed(is_synced: bool) -> void:
+	if _status_label:
+		if is_synced:
+			_status_label.text = "ON-CHAIN"
+			_status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+		else:
+			_status_label.text = "OFFLINE"
+			_status_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+
+
+func _on_blockchain_event(event_type: String, data: Dictionary) -> void:
+	match event_type:
+		"connected":
+			print("[GameManager] Connected to blockchain: %s" % data.get("pubkey", ""))
+		"village_data":
+			print("[GameManager] Village data received from chain")
+		"matchmake_result":
+			var opponent = data.get("opponent", {})
+			print("[GameManager] Opponent found: %s" % opponent.get("displayName", "Unknown"))
+		"error":
+			print("[GameManager] Blockchain error: %s" % data.get("message", ""))
+			# Re-enable button on error
+			if _wallet_btn:
+				_wallet_btn.text = "Create Wallet"
+				_wallet_btn.disabled = false

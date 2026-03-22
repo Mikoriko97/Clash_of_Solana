@@ -33,6 +33,9 @@ export_presets.cfg
 Thumbs.db
 desktop.ini
 
+# Solana test validator
+test-ledger/
+
 # Build artifacts
 *.so
 *.o
