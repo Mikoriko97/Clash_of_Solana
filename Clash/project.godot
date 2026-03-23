@@ -17,8 +17,9 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-BlockchainBridge="*uid://babhgs54vgsxr"
-NetworkManager="*uid://dxydq6gb4l6ac"
+NetworkManager="*res://scripts/network_manager.gd"
+BlockchainBridge="*res://scripts/blockchain_bridge.gd"
+BattleTracker="*res://scripts/battle_tracker.gd"
 
 [editor_plugins]
 

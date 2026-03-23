@@ -14,6 +14,8 @@ import {
   readBattleState,
 } from "../services/solana-state";
 import { findOpponent } from "../services/matchmaking";
+import { findOpponentRedis } from "../services/matchmaking-redis";
+import { decrypt } from "../services/crypto";
 import { getPool } from "../db";
 
 const BUILDING_TYPE_MAP: Record<string, number> = {
@@ -66,7 +68,7 @@ export async function gameRoutes(app: FastifyInstance) {
   const getKeypair = async (pubkey: string) => {
     const result = await query(`SELECT secret_key FROM players WHERE pubkey=$1`, [pubkey]);
     if (result.rows.length === 0 || !result.rows[0].secret_key) return null;
-    return keypairFromSecret(result.rows[0].secret_key);
+    return keypairFromSecret(decrypt(result.rows[0].secret_key));
   };
 
   // ══════════════════════════════════════
@@ -241,20 +243,26 @@ export async function gameRoutes(app: FastifyInstance) {
       const trophies = state?.trophyCount ?? 0;
       const thLevel = state?.thLevel ?? 1;
 
-      const opponent = await findOpponent(
-        { attackerPubkey: pubkey, attackerTrophies: trophies, attackerThLevel: thLevel },
-        getPool()
-      );
+      // Try Redis matchmaking first, fallback to PostgreSQL
+      let opponentPubkey: string | null = await findOpponentRedis(pubkey, trophies, thLevel);
 
-      if (!opponent) return reply.status(404).send({ success: false, error: "No opponent found" });
+      if (!opponentPubkey) {
+        const pgOpponent = await findOpponent(
+          { attackerPubkey: pubkey, attackerTrophies: trophies, attackerThLevel: thLevel },
+          getPool()
+        );
+        opponentPubkey = pgOpponent?.playerPubkey ?? null;
+      }
+
+      if (!opponentPubkey) return reply.status(404).send({ success: false, error: "No opponent found" });
 
       // Read opponent state from chain
-      const oppState = await getFullOnChainState(new PublicKey(opponent.playerPubkey));
+      const oppState = await getFullOnChainState(new PublicKey(opponentPubkey));
 
       return {
         success: true,
         opponent: {
-          pubkey: opponent.playerPubkey,
+          pubkey: opponentPubkey,
           displayName: oppState?.displayName ?? "Opponent",
           trophyCount: oppState?.trophyCount ?? 0,
           thLevel: oppState?.thLevel ?? 1,

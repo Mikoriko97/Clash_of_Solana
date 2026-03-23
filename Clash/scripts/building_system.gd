@@ -1115,6 +1115,10 @@ func remove_building(b: Dictionary) -> void:
 	if is_instance_valid(b.node):
 		b.node.queue_free()
 	placed_buildings.remove_at(idx)
+	# Notify battle tracker
+	var tracker = get_node_or_null("/root/BattleTracker")
+	if tracker and tracker.is_tracking:
+		tracker.on_building_destroyed(b.get("id", ""))
 	_deselect_building()
 
 

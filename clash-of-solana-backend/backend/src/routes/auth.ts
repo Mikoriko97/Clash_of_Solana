@@ -6,6 +6,8 @@ import { query } from "../db";
 import { Keypair, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { config } from "../config";
 import { txInitializeVillage } from "../services/solana-state";
+import { encrypt } from "../services/crypto";
+import { addToMatchPool } from "../services/matchmaking-redis";
 
 const connectSchema = z.object({
   pubkey: z.string().min(32).max(44),
@@ -99,7 +101,7 @@ export async function authRoutes(app: FastifyInstance) {
         `INSERT INTO players (pubkey, secret_key, display_name, last_active)
          VALUES ($1, $2, 'Player', NOW())
          ON CONFLICT (pubkey) DO UPDATE SET last_active = NOW()`,
-        [pubkey, secretKey]
+        [pubkey, encrypt(secretKey)]
       );
       await query(
         `INSERT INTO matchmaking_pool (player_pubkey, trophy_count, th_level, last_active)
@@ -107,6 +109,9 @@ export async function authRoutes(app: FastifyInstance) {
          ON CONFLICT (player_pubkey) DO UPDATE SET last_active = NOW()`,
         [pubkey]
       );
+
+      // Add to Redis matchmaking pool
+      await addToMatchPool(pubkey, 0, 1);
 
       // Initialize village ON-CHAIN (Solana L1)
       let villageTxSig = "";

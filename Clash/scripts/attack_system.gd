@@ -49,6 +49,10 @@ func _ready() -> void:
 func enter_attack_mode() -> void:
 	is_attack_mode = true
 	_ships_placed = 0
+	# Start battle tracking
+	var tracker = get_node_or_null("/root/BattleTracker")
+	if tracker:
+		tracker.start_tracking()
 	if ship_plane:
 		ship_plane.visible = true
 	print("Attack mode ON - place up to %d ships!" % max_ships)
@@ -70,6 +74,9 @@ func _input(event: InputEvent) -> void:
 			if hit != Vector3.INF:
 				_spawn_single_ship(hit)
 				_ships_placed += 1
+				var tracker = get_node_or_null("/root/BattleTracker")
+				if tracker:
+					tracker.on_ship_deployed()
 				get_viewport().set_input_as_handled()
 				if _ships_placed >= max_ships:
 					exit_attack_mode()

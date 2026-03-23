@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { verifyTransaction } from "../solana";
+import { query } from "../db";
 
 const purchaseSchema = z.object({
   offerId: z.string().min(1).max(64),
@@ -85,10 +86,20 @@ export async function shopRoutes(app: FastifyInstance) {
 
     app.log.info({ pubkey, offerId, txSignature }, "Shop purchase verified");
 
+    // Log purchase and resource credit for the player
+    if ("resources" in offer && offer.resources) {
+      await query(
+        `INSERT INTO purchase_credits (player_pubkey, gold, wood, ore, offer_id, tx_signature)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [pubkey, offer.resources.gold || 0, offer.resources.wood || 0, offer.resources.ore || 0, offerId, txSignature]
+      );
+    }
+
     return {
       success: true,
       offerId,
       txSignature,
+      credited: "resources" in offer && offer.resources ? offer.resources : null,
       message: "Purchase verified on-chain. Resources will be credited.",
     };
   });
